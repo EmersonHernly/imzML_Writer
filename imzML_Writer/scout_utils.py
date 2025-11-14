@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from matplotlib.widgets import PolygonSelector
 from matplotlib.path import Path
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from imzml_writer import utils
 
 
 roi_mask = None
@@ -108,10 +109,38 @@ def load_ROI():
     global roi_mask, verts
     file_location =filedialog.askopenfilename(defaultextension='.npz')
 
-    loaded_data = np.load(file_location)
+    loaded_data = np.load(file_location,allow_pickle=True)
     verts = loaded_data['verts']
     roi_mask = loaded_data['roi_mask']
     mask_list = loaded_data['mask_list']
+
+def write_masked_imzml_handler(tgt_file:str):
+
+    #Verify roi mask actually exists
+    if roi_mask is None:
+        messagebox.showwarning(title='No mask imposed',message="Please specify an ROI mask before trying to export")
+        return
+
+    progress_window = tk.Toplevel()
+    progress_window.title("Writing masked imzML...")
+    progress_window.config(padx=20, pady=10, bg=TEAL)
+    ttk.Label(progress_window, text="Writing masked imzML please wait...", background=TEAL, foreground="white", font=FONT).pack()
+    progress_window.update_idletasks()
+
+
+    try:
+        filepath = utils.write_masked_imzML(tgt_file,roi_mask)
+        messagebox.showinfo(title="imzML write complete", message=f"Masked file saved to {filepath}")
+    except Exception as exc:
+        messagebox.showerror(title="Write failed", message=str(exc))
+    finally:
+        progress_window.grab_release()
+        progress_window.destroy()
+
+    
+
+    
+
 
 
 

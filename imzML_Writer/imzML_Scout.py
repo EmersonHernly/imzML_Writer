@@ -857,6 +857,9 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
     include_tic = tk.Checkbutton(window_scout,text="Include TIC?",bg=TEAL,font=FONT,var=include_TIC_var)
     include_tic.grid(row=9,column=0)
 
+    masked_imzml_button = tk.Button(window_scout,text="Write masked imzML", bg=TEAL, highlightbackground=TEAL,command=lambda:scout_utils.write_masked_imzml_handler(file_var.get()))
+    masked_imzml_button.grid(row=9,column=3)
+
     ##Export quality
     quality_label = tk.Label(window_scout,text="Export quality (dpi):",bg=TEAL,font=FONT)
     qual_var = tk.StringVar(window_scout)

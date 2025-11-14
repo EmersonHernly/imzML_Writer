@@ -926,8 +926,7 @@ def write_masked_imzML(source_file:str,roi_mask:np.array,save_dir:str=None) -> s
     :param source_file: path to the source imzML
     :param roi_mask: numpy array matching dimensions of source file, where 0 indicates an excluded pixel and 1 is an included pixel
     :param save_dir: Where to save the resulting imzML, defaults to the same directory as the source file
-    
-    :return: Full file path to the resulting imzML"""
+    """
 
     if not save_dir:
         save_dir = os.path.dirname(source_file)
@@ -938,6 +937,7 @@ def write_masked_imzML(source_file:str,roi_mask:np.array,save_dir:str=None) -> s
 
     with warnings.catch_warnings(action='ignore'):
         with imzmlp.ImzMLParser(filename=source_file,parse_lib='lxml') as img:
+            total_pixels = len(img.coordinates)
             with imzmlw.ImzMLWriter(new_filepath, mode='processed') as new_imzml:
                 zero_offset = 1
                 for idx, (x,y,z) in enumerate(img.coordinates):
@@ -949,6 +949,7 @@ def write_masked_imzML(source_file:str,roi_mask:np.array,save_dir:str=None) -> s
                         new_imzml.addSpectrum(mzs,ints,(x,y,z))
     
     annotate_from_model_imzML(source_file, new_filepath)
+    return new_filepath
 
     
     

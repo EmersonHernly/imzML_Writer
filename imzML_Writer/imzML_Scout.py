@@ -30,6 +30,15 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
     FONT = ("HELVETICA", 18, 'bold')
 
 
+    def getionimage_wrapper(img_file:imzmlp.ImzMLParser,tgt_mz:float,window:float):
+        image = imzmlp.getionimage(p=img_file, mz_value=tgt_mz, tol=window)
+        if tgt_mz >= low_range and tgt_mz <= high_range:
+            return image
+        else:
+            dims = image.shape
+            image = np.zeros(shape=dims)
+            return image
+
     def browse_for_file():
         """Launch dialog box for user to find and select a target imzML file"""
         path_to_file = filedialog.askopenfilename(initialdir=os.getcwd(),filetypes=[("imzML Files","*.imzML")])
@@ -48,6 +57,14 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
             return y_pix_size/x_pix_size, x_pix_size, y_pix_size, max_x_dimension
         except:
             return 1, 1, 1, 1
+    
+    def get_scan_range(img_file:imzmlp.ImzMLParser):
+        global low_range, high_range
+        first_scan = img_file.getspectrum(0)
+        low_range = np.min(first_scan[0])
+        high_range = np.max(first_scan[0])
+        
+
 
     def plot_ion_image(*_):
         """Deals with data update for plotting a new ion image, retrieving targets from the user input fields"""
@@ -67,12 +84,15 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
                     imzML_object = imzmlp.ImzMLParser(filename=filename,parse_lib='lxml')
             else:
                 imzML_object = imzmlp.ImzMLParser(filename=filename,parse_lib='lxml')
+        
+        
+        get_scan_range(imzML_object)
 
         #Check if TIC image was requested, view entire spectrum if so. Otherwise generate datagrid of requested m/z and tolerance combo
         if view_tic_option.get():
-            ion_image = imzmlp.getionimage(imzML_object,mz_value=200,tol=9999)
+            ion_image = getionimage_wrapper(imzML_object,mz_value=200,tol=9999)
         else:
-            ion_image = imzmlp.getionimage(imzML_object,target_mz,mz_window)
+            ion_image = getionimage_wrapper(imzML_object,target_mz,mz_window)
         
         #Get aspect ratio
         [aspect_ratio, x_pix, y_pix, max_x_dimension] = get_aspect_ratio(imzML_object)
@@ -82,10 +102,10 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
         if norm_method == "custom":
             norm_mz = float(normalize_custom_entry.get())
             norm_window = norm_mz * tolerance / 1e6
-            norm_grid = imzmlp.getionimage(imzML_object,mz_value=norm_mz,tol=norm_window)
+            norm_grid = getionimage_wrapper(imzML_object,mz_value=norm_mz,tol=norm_window)
             ion_image = np.divide(ion_image,norm_grid,out=np.zeros_like(ion_image),where=norm_grid!=0)
         elif norm_method == "TIC":
-            norm_grid = imzmlp.getionimage(imzML_object,mz_value=200,tol=9999)
+            norm_grid = getionimage_wrapper(imzML_object,mz_value=200,tol=9999)
             ion_image = np.divide(ion_image,norm_grid,out=np.zeros_like(ion_image),where=norm_grid!=0)
         
         #Initiate new raw data variable so we can freely manipulate the ion image as needed
@@ -237,7 +257,7 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
 
     def bulk_export_csv():
         """Exports a batch of images as csv files, prompts the user for a spreadsheet of target m/z and names"""
-        global red_highlight_patch, last_selected_patch, raw_ion_image
+        global raw_ion_image
 
         ##Prompt user for a spreadsheet of target m/z and names to give them
         target_list_file = filedialog.askopenfilename(initialdir=os.getcwd(),filetypes=[("Excel Spreadsheet",".xlsx"),("CSV File",".csv")])
@@ -292,18 +312,29 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
             return None
 
 
+    def hide_patches():
+        global red_highlight_patch, last_selected_patch
+        if red_highlight_patch != None:
+            red_highlight_patch.set_visible(False)
+
+        
+        if last_selected_patch !=None:
+            last_selected_patch.set_visible(False)
+
+    def show_patches():
+        global red_highlight_patch, last_selected_patch
+        if red_highlight_patch != None:
+            red_highlight_patch.set_visible(True)
+
+        
+        if last_selected_patch !=None:
+            last_selected_patch.set_visible(True)
 
 
     def export_image(fig):
         """Export the currently viewed image as an image file (tif, png, jpg), prompt the user for where to put it"""
-        global red_highlight_patch, last_selected_patch
 
-        ##Remove any highlight patches from the data
-        if red_highlight_patch != None:
-            red_highlight_patch.remove()
-        
-        if last_selected_patch !=None:
-            last_selected_patch.remove()
+        hide_patches()
         
         #Prompt the user for where to save it
         file = filedialog.asksaveasfilename(initialdir=os.getcwd(),filetypes=[("TIF", ".tif"),("PNG",".png"),("JPG", ".jpg")])
@@ -327,6 +358,9 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
                         format=file_format,
                         bbox_inches="tight",
                         pad_inches=0)
+        
+        show_patches()
+            
 
 
     def check_normalization():
@@ -522,7 +556,7 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
 
     def bulk_export():
         """Export a series of ion images with the currently selected view settings. Prompts the user for a spreadsheet with target m/z and labels."""
-        global fig, red_highlight_patch, last_selected_patch
+        global fig
         #prompt the user for the target list
         target_list_file = filedialog.askopenfilename(initialdir=os.getcwd(),filetypes=[("Excel Spreadsheet",".xlsx"),("CSV File",".csv")])
         target_list = pd.read_excel(target_list_file)
@@ -541,13 +575,7 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
             mz_entry.delete(0,tk.END)
             mz_entry.insert(0,row.values[1])
             plot_ion_image()
-            if red_highlight_patch != None:
-                red_highlight_patch.remove()
-                red_highlight_patch = None
-        
-            if last_selected_patch !=None:
-                last_selected_patch.remove()
-                last_selected_patch = None
+            hide_patches()
 
 
 
@@ -574,6 +602,8 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
                         format=used_extension,
                         bbox_inches="tight",
                         pad_inches=0)
+        
+        show_patches()
 
         ##optionally, export a TIC image if selected
         if include_TIC_var.get():

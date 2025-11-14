@@ -7,6 +7,8 @@ TODO:
 -Added optional '--combineIonMobility' flag to advanced options, passed to msconvert during mzML writing
 -Added simple test suite for Agilent/Thermo/Waters to ensure basic functionality is working
 -Fixed a bug where files would not be copied to external drives
+-Added a function to write a masked imzML to cut out background
+-Added a wrapper around pyimzml getionimage so that m/z below the bottom of the scan range return as zero
 
 -Added image viewing option 'smooth', which uses scipy.nkimage's zoom option to interpolate between pixels and smooth out the square edges
 -Fixed coordinate selection for spectrum viewing to match, now actually searches imzML object for matching coordinates rather than inferring by length (which broke for imzML without all data written)

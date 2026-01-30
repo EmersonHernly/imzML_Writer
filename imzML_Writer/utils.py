@@ -26,6 +26,10 @@ logging.basicConfig(filename = "LOGFILE_imzML_Writer.log",level = logging.INFO)
 logger.info("NEW INSTANCE STARTING...")
 
 
+# DOCKER_IMAGE = "chambm/pwiz-skyline-i-agree-to-the-vendor-licenses"
+# DOCKER_IMAGE = "proteowizard/pwiz-skyline-i-agree-to-the-vendor-licenses"
+DOCKER_IMAGE = "chambm/pwiz-skyline-i-agree-to-the-vendor-licenses:3.0.25034-b186be1"
+
 ##Colors and FONTS
 TEAL = "#2da7ad"
 BEIGE = "#dbc076"
@@ -283,7 +287,6 @@ def get_file_type(path:str):
 
 def Check_Docker_Image():
     """Tests that docker is available, prompts the user to update/install if available"""
-    DOCKER_IMAGE = "chambm/pwiz-skyline-i-agree-to-the-vendor-licenses"
     try:
         client = docker.from_env()
     except:
@@ -321,14 +324,13 @@ def RAW_to_mzML(path:str,write_mode:str="Centroid", combine_ion_mobility:bool=Fa
     if "win" in sys.platform and sys.platform != "darwin":
         viaPWIZ(path,write_mode, combine_ion_mobility)
     else:
-        DOCKER_IMAGE = "chambm/pwiz-skyline-i-agree-to-the-vendor-licenses"
         client = Check_Docker_Image()
         file_type = get_file_type(path)
 
-        vol = {path: {'bind': fr"/{DOCKER_IMAGE}/data", 'mode': 'rw'}}
+        vol = {path: {'bind': fr"/data", 'mode': 'rw'}}
 
 
-        comm = fr"wine msconvert /{DOCKER_IMAGE}/data/*.{file_type} --zlib=off --mzML --64 --outdir /{DOCKER_IMAGE}/data"
+        comm = fr"wine msconvert /data/*.{file_type} --zlib=off --mzML --64 --outdir /data"
 
         if write_mode=="Centroid":
             comm += fr" --filter '"'peakPicking true 1-'"'"
@@ -340,15 +342,18 @@ def RAW_to_mzML(path:str,write_mode:str="Centroid", combine_ion_mobility:bool=Fa
         env_vars = {"WINEDEBUG": "-all"}
         
         ##Call/run the docker container
-        client.containers.run(
-            image=DOCKER_IMAGE,
-            environment=env_vars,
-            volumes = vol,
-            command=comm,
-            working_dir=path,
-            auto_remove= True,
-            detach=False
-            )
+        try:
+            client.containers.run(
+                image=DOCKER_IMAGE,
+                environment=env_vars,
+                volumes = vol,
+                command=comm,
+                working_dir=path,
+                auto_remove= True,
+                detach=False
+                )
+        except:
+            raise
         
         
 
@@ -935,9 +940,22 @@ def write_masked_imzML(source_file:str,roi_mask:np.array,save_dir:str=None) -> s
     new_filename = f"{filename}-masked.imzML"
     new_filepath = os.path.join(save_dir,new_filename)
 
+
     with warnings.catch_warnings(action='ignore'):
         with imzmlp.ImzMLParser(filename=source_file,parse_lib='lxml') as img:
             total_pixels = len(img.coordinates)
+            test_img = imzmlp.getionimage(img, 104.1070)
+
+            if roi_mask.shape != test_img.shape:
+                while roi_mask.shape[1] > test_img.shape[1]:
+                    print(roi_mask.shape, test_img.shape)
+                    roi_mask = roi_mask[:,:-1]
+                while roi_mask.shape[1] < test_img.shape[1]:
+                    roi_mask = np.pad(roi_mask, ((0,0), (0,1)), mode='edge')
+            
+            print(roi_mask.shape, test_img.shape)
+                
+
             with imzmlw.ImzMLWriter(new_filepath, mode='processed') as new_imzml:
                 zero_offset = 1
                 for idx, (x,y,z) in enumerate(img.coordinates):

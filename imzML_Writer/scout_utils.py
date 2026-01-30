@@ -13,6 +13,8 @@ from imzml_writer import utils
 roi_mask = None
 verts = None
 mask_list = None
+raw_ion_image = None
+
 TEAL = "#2da7ad"
 BEIGE = "#dbc076"
 FONT = ("HELVETICA", 18, 'bold')
@@ -113,6 +115,14 @@ def load_ROI():
     verts = loaded_data['verts']
     roi_mask = loaded_data['roi_mask']
     mask_list = loaded_data['mask_list']
+
+    if roi_mask.shape != raw_ion_image.shape:
+        while roi_mask.shape[1] > raw_ion_image.shape[1]:
+            print(roi_mask.shape, raw_ion_image.shape)
+            roi_mask = roi_mask[:,:-1]
+        while roi_mask.shape[1] < raw_ion_image.shape[1]:
+            roi_mask = np.pad(roi_mask, ((0,0), (0,1)), mode='edge')
+    
 
 def write_masked_imzml_handler(tgt_file:str):
 

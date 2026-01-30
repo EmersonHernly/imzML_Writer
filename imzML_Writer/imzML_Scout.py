@@ -60,9 +60,14 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
     
     def get_scan_range(img_file:imzmlp.ImzMLParser):
         global low_range, high_range
-        first_scan = img_file.getspectrum(0)
-        low_range = np.min(first_scan[0])
-        high_range = np.max(first_scan[0])
+        low_range = np.inf
+        high_range = np.inf * -1
+        for i in range(100):
+            scan = img_file.getspectrum(i)
+            if np.min(scan[0]) < low_range:
+                low_range = np.min(scan[0])
+            if np.max(scan[0]) > high_range:
+                high_range = np.max(scan[0])
         
 
 
@@ -110,6 +115,7 @@ def main(tgt_file:str = "",initial_mz:float=104.1070):
         
         #Initiate new raw data variable so we can freely manipulate the ion image as needed
         raw_ion_image = ion_image
+        scout_utils.raw_ion_image = raw_ion_image
 
         fig = update_ion_image()
         return fig

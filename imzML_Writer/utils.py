@@ -206,7 +206,9 @@ def viaPWIZ(path:str,write_mode:str,combine_ion_mobility:bool):
     
     msconvert = check_msconvert()
 
-    ms_convert_args = [msconvert,fr"{path}\*.{file_type}", "--mzML", "--64"]
+    outdir = os.path.join(path,"Output mzML Files")
+
+    ms_convert_args = [msconvert,fr"{path}\*.{file_type}", "--outdir", outdir, "--mzML", "--64"]
     if write_mode=="Centroid":
         ms_convert_args.append("--filter")
         ms_convert_args.append("peakPicking true 1-")
@@ -518,7 +520,7 @@ def mzML_to_imzML_convert(progress_target=None,PATH:str=os.getcwd(),LOCK_MASS:fl
         if filt == None:
             image_files[filt]=imzmlw.ImzMLWriter(output_filename=fr"{OUTPUT_NAME}_None",mode="processed",polarity=polarities[filt_idx])
         else:
-            image_files[filt] = imzmlw.ImzMLWriter(output_filename=fr"{OUTPUT_NAME}_{filt.split(".")[0]}",mode="processed",polarity=polarities[filt_idx])
+            image_files[filt] = imzmlw.ImzMLWriter(output_filename=fr"{OUTPUT_NAME}_{filt.replace(".", "_")}",mode="processed",polarity=polarities[filt_idx])
         output_files[filt]=(fr"{OUTPUT_NAME}_{filt}")
 
     num_duplicates = 0
